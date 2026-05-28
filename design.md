@@ -4,36 +4,6 @@ A C++ application using SQLite3 as an embedded database and imtui (Dear ImGui te
 
 ---
 
-## ER Diagram
-
-```
-sensor_types          gateways          locations
-┌──────────────┐    ┌──────────────┐    ┌──────────────┐
-│ type_id (PK) │    │ gateway_id(PK)│    │location_id(PK)│
-│ type_name    │    │gateway_name  │    │ location_gps │
-└──────┬───────┘    │gateway_loc   │    │ location_info│
-                       └─────────────┘    └──────┬─────┘
-                                                  │
-          ┌───────────────────────────────────────┤
-          │                                       │
-┌─────────▼──────────┐     ┌──────────────┐      │
-│ sensor_type_link   │     │  sensors     │      │
-│ link_id (PK)       │     │ sensor_id(PK)│      │
-│ type_id (FK)       │     │ gateway_id(FK)───────┘
-│ sensor_id (FK)     │     │ sensor_name  │
-└────────────────────┘     │ location_id(FK)
-                           │ extra_loc_info│
-                           └───────┬──────┘
-                                   │
-                           ┌───────▼──────────┐
-                           │  sensor_values    │
-                           │ id (PK)           │
-                           │ sensor_id (FK)    │
-                           │ timestamp         │
-                           │ value             │
-                           └───────────────────┘
-```
-
 ## Relationships
 
 | Relationship | Cardinality | Details |
@@ -92,39 +62,3 @@ Key design decisions:
 | `updateSensorValue(id, sensor_id, timestamp, value)` | UPDATE sensor_values |
 | `getHandle()` | Return raw `sqlite3*` for direct access |
 | `execSQLFile(db, path)` (static) | Read entire file into std::string |
-
-### `class SensorUI` — Terminal UI state machine
-
-| Field / Method | Purpose |
-|---|---|
-| `selected_menu` | Current view (enum: MENU_SENSORS, MENU_GATEWAYS, etc.) |
-| `selected_sensor`, `selected_gateway`, etc. | Index into the currently loaded list |
-| `running` | Main loop flag (set to false to quit) |
-| `initTheme()` | Apply dark ImGui style colors |
-| `render(db, screen)` | Main per-frame function: processes input, dispatches to view |
-| `renderMainMenu()` | Tab bar with 8 menu items |
-| `renderSensors()` / `renderGateways()` / `renderLocations()` | List views with selectable rows + Update/Delete |
-| `renderSensorValues()` | Readings list for a selected sensor |
-| `renderAdd*()` | Forms with InputText + Combo + Save button |
-| `renderUpdate*()` | Pre-populated forms with Save Changes |
-| `renderDeleteConfirm()` | Centered modal dialog with Yes/Cancel buttons |
-| `flash_message` / `flash_text` | Toast notification (auto-dismiss after ~2 seconds) |
-
----
-
-## Architecture Overview
-
-```
-main.cpp
-  └── Database::init() + loadSeedData()
-  └── SensorUI::initTheme()
-  └── while(running) → SensorUI::render(db, screen)
-        ├── renderMainMenu()     ← tab bar
-        ├── renderSensors()      ← list view
-        ├── renderGateways()     ← list view
-        ├── renderLocations()    ← list view
-        ├── renderSensorValues() ← readings list
-        ├── renderAdd*()         ← create forms
-        ├── renderUpdate*()      ← edit forms
-        └── renderDeleteConfirm()← modal dialog
-``` 
