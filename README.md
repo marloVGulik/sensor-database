@@ -25,8 +25,7 @@ See `design.md` for the conceptual ER diagram and logical design details.
 
 - **CMake** >= 3.10
 - **SQLite3** development library (`libsqlite3-dev`)
-- **ncurses** development library (`libncurses-dev`)
-- **imtui** (vendored in `vendor/imtui/`)
+- **imgui** (vendored in `vendor/imgui/`)
 
 ## Build Instructions
 
@@ -41,7 +40,8 @@ The SQL files (`setup.sql`, `seed.sql`) are automatically copied to the build di
 ## Usage
 
 ```bash
-# Use default database path (sensor_data.db in current directory)
-./database_sensor
+# Use default database path (sensor_data.db in current directory).
+# It is important you run the program in the same directory as the seed.sql and setup.sql files.
+./build/database_sensor
 ```
 
