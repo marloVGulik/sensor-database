@@ -29,8 +29,8 @@ CREATE TABLE IF NOT EXISTS sensors (
     sensor_name TEXT NOT NULL,                      -- Sensor name (e.g., "Temp Sensor Dorm A")
     location_id INTEGER NOT NULL,                   -- FK: physical installation location
     extra_location_info TEXT DEFAULT '',            -- Additional installation notes
-    FOREIGN KEY (gateway_id) REFERENCES gateways(gateway_id),
-    FOREIGN KEY (location_id) REFERENCES locations(location_id)
+    FOREIGN KEY (gateway_id) REFERENCES gateways(gateway_id) ON DELETE SET NULL,
+    FOREIGN KEY (location_id) REFERENCES locations(location_id)ON DELETE SET NULL
 );
 
 -- Many-to-many link table: a sensor can have multiple types, a type can apply to multiple sensors
@@ -38,8 +38,8 @@ CREATE TABLE IF NOT EXISTS sensor_type_link (
     link_id INTEGER PRIMARY KEY AUTOINCREMENT,  -- Unique link identifier
     type_id INTEGER NOT NULL,                    -- FK: sensor type
     sensor_id INTEGER NOT NULL,                  -- FK: sensor
-    FOREIGN KEY (type_id) REFERENCES sensor_types(type_id),
-    FOREIGN KEY (sensor_id) REFERENCES sensors(sensor_id)
+    FOREIGN KEY (type_id) REFERENCES sensor_types(type_id) ON DELETE CASCADE,
+    FOREIGN KEY (sensor_id) REFERENCES sensors(sensor_id) ON DELETE CASCADE
 );
 
 -- Time-series sensor readings (values table)
@@ -48,6 +48,7 @@ CREATE TABLE IF NOT EXISTS sensor_values (
     sensor_id INTEGER NOT NULL,            -- FK: which sensor this reading belongs to
     timestamp TEXT NOT NULL,               -- ISO format: YYYY-MM-DD HH:MM:SS
     value REAL NOT NULL,                   -- Numeric sensor reading
-    FOREIGN KEY (sensor_id) REFERENCES sensors(sensor_id),
+    FOREIGN KEY (sensor_id) REFERENCES sensors(sensor_id) ON DELETE CASCADE,
     UNIQUE(sensor_id, timestamp)           -- Prevent duplicate readings at same timestamp
 );
+

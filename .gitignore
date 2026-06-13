@@ -2,3 +2,4 @@ build
 vendor/imgui
 imgui.ini
 sensors_data.db
+.$*

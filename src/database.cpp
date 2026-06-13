@@ -14,6 +14,9 @@ bool Database::init(const std::string& db_path, const std::string& setup_sql_pat
         return false;
     }
 
+    // Turn on remote deletion when foreign keys are removed
+    sqlite3_exec(db_, "PRAGMA foreign_keys = ON;", nullptr, nullptr, nullptr);
+
     // Read and execute the schema SQL file
     std::string sql = execSQLFile(db_, setup_sql_path);
     char* err = nullptr;
@@ -238,11 +241,26 @@ int Database::addSensor(const std::string& name, int gateway_id, int location_id
     if (sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr) != SQLITE_OK) return -1;
 
     sqlite3_bind_text(stmt, 1, name.c_str(), -1, SQLITE_STATIC);
-    sqlite3_bind_int(stmt, 2, gateway_id);
-    sqlite3_bind_int(stmt, 3, location_id);
+    
+    // Check if valid ID, otherwise bind NULL to satisfy Foreign Key constraints
+    if (gateway_id > 0) sqlite3_bind_int(stmt, 2, gateway_id);
+    else sqlite3_bind_null(stmt, 2);
+    
+    if (location_id > 0) sqlite3_bind_int(stmt, 3, location_id);
+    else sqlite3_bind_null(stmt, 3);
+    
     sqlite3_bind_text(stmt, 4, extra.c_str(), -1, SQLITE_STATIC);
-    sqlite3_step(stmt);
-    int id = sqlite3_last_insert_rowid(db_);
+    
+    int rc = sqlite3_step(stmt);
+    int id = -1;
+    
+    // Only return an ID if the insert actually succeeded
+    if (rc == SQLITE_DONE) {
+        id = sqlite3_last_insert_rowid(db_);
+    } else {
+        std::cerr << "[SQLite Error] Failed to add sensor: " << sqlite3_errmsg(db_) << std::endl;
+    }
+    
     sqlite3_finalize(stmt);
     return id;
 }
@@ -385,17 +403,40 @@ int Database::deleteSensorValue(int value_id) {
     return 0;
 }
 
-/// Update a sensor's name, gateway, location, and extra info.
+// Unlink sensor from type
+void Database::unlinkSensorFromType(int sensor_id, int type_id) {
+    const char* sql = "DELETE FROM sensor_type_link WHERE sensor_id = ? AND type_id = ?;";
+    sqlite3_stmt* stmt;
+    if (sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr) == SQLITE_OK) {
+        sqlite3_bind_int(stmt, 1, sensor_id);
+        sqlite3_bind_int(stmt, 2, type_id);
+        sqlite3_step(stmt);
+        sqlite3_finalize(stmt);
+    }
+}
+
+/// Update a sensor's properties.
 bool Database::updateSensor(int sensor_id, const std::string& name, int gateway_id, int location_id, const std::string& extra) {
     const char* sql = "UPDATE sensors SET sensor_name = ?, gateway_id = ?, location_id = ?, extra_location_info = ? WHERE sensor_id = ?;";
     sqlite3_stmt* stmt;
     if (sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr) == SQLITE_OK) {
         sqlite3_bind_text(stmt, 1, name.c_str(), -1, SQLITE_STATIC);
-        sqlite3_bind_int(stmt, 2, gateway_id);
-        sqlite3_bind_int(stmt, 3, location_id);
+        
+        // Handle Foreign Keys here as well
+        if (gateway_id > 0) sqlite3_bind_int(stmt, 2, gateway_id);
+        else sqlite3_bind_null(stmt, 2);
+        
+        if (location_id > 0) sqlite3_bind_int(stmt, 3, location_id);
+        else sqlite3_bind_null(stmt, 3);
+        
         sqlite3_bind_text(stmt, 4, extra.c_str(), -1, SQLITE_STATIC);
         sqlite3_bind_int(stmt, 5, sensor_id);
+        
         int rc = sqlite3_step(stmt);
+        if (rc != SQLITE_DONE) {
+            std::cerr << "[SQLite Error] Failed to update sensor: " << sqlite3_errmsg(db_) << std::endl;
+        }
+        
         sqlite3_finalize(stmt);
         return (rc == SQLITE_DONE);
     }

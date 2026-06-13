@@ -114,6 +114,11 @@ public:
     /// @return 1 if deleted successfully, 0 otherwise
     int deleteSensorValue(int value_id);
 
+    /// Unlink a sensor from a specific type.
+    /// @param sensor_id FK to sensors table
+    /// @param type_id FK to sensor_types table
+    void unlinkSensorFromType(int sensor_id, int type_id);
+
     // ==================== Update Methods ====================
 
     /// Update a sensor's properties.
@@ -152,6 +157,7 @@ public:
     /// @param value New reading value
     /// @return true if update succeeded
     bool updateSensorValue(int value_id, int sensor_id, const std::string& timestamp, double value);
+    
 
     // ==================== Utility Methods ====================
 
