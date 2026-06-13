@@ -1,68 +1,42 @@
-# ============================================================
-# CMake build configuration for database_sensor
-# ============================================================
-
 cmake_minimum_required(VERSION 3.10)
-project(database_sensor VERSION 1.0)
+project(SensorDatabaseProgram)
 
-# Export compile_commands.json for IDE tooling (clangd, etc.)
-set(CMAKE_EXPORT_COMPILE_COMMANDS "on")
+set(CMAKE_CXX_STANDARD 17)
 
-# C++11 required for std::stringstream and sqlite3 C API compatibility
-set(CMAKE_CXX_STANDARD 11)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
+# --- Fix for the CMP0072 Warning ---
+set(OpenGL_GL_PREFERENCE GLVND)
 
-# Default to Release build if no build type specified
-# Provides optimization flags (-O2) without debug symbols
-if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
-    set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
-    set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "RelWithDebInfo")
-endif()
+# Find necessary system packages
+find_package(OpenGL REQUIRED)
+find_package(glfw3 REQUIRED)
 
-# Add vendored imtui library (Dear ImGui terminal UI) as subdirectory
-# This brings in imgui, imtui core, and ncurses backend targets
-add_subdirectory(vendor/imtui)
-
-# Find system SQLite3 library and headers
-find_package(SQLite3 REQUIRED)
-
-# All source files for the application
-set(SOURCES
-    src/main.cpp
-    src/database.cpp
-    src/ui.cpp
-    src/views/render_sensors.cpp
-    src/views/render_values.cpp
-    src/views/render_add.cpp
-    src/views/render_update.cpp
-    src/views/render_delete.cpp
+# Include directories
+include_directories(
+    ${CMAKE_CURRENT_SOURCE_DIR}/vendor/imgui
+    ${CMAKE_CURRENT_SOURCE_DIR}/vendor/imgui/backends
 )
 
-# Header files (for IDE indexing; not compiled directly)
-set(HEADERS
-    src/models.h
-    src/database.h
-    src/ui.h
+# ImGui Source files
+set(IMGUI_SOURCES
+    vendor/imgui/imgui.cpp
+    vendor/imgui/imgui_draw.cpp
+    vendor/imgui/imgui_tables.cpp
+    vendor/imgui/imgui_widgets.cpp
+    vendor/imgui/backends/imgui_impl_glfw.cpp
+    vendor/imgui/backends/imgui_impl_opengl3.cpp
 )
 
-# Create executable from sources
-add_executable(database_sensor ${SOURCES} ${HEADERS})
+# Your application source files
+file(GLOB_RECURSE APP_SOURCES ${PROJECT_SOURCE_DIR}/src/*.cpp)
 
-# Include paths for headers: project src, SQLite3, and vendored imtui
-target_include_directories(database_sensor PRIVATE
-    src
-    ${SQLite3_INCLUDE_DIRS}
-    vendor/imtui/include
-    vendor/imtui/third-party
-    vendor/imtui/src
+# Create executable
+add_executable(${PROJECT_NAME} ${APP_SOURCES} ${IMGUI_SOURCES})
+
+# Link libraries (SQLite3, GLFW, OpenGL)
+target_link_libraries(${PROJECT_NAME}
+    glfw
+    OpenGL::GL
+    sqlite3
+    dl
+    pthread
 )
-
-# Link against imtui ncurses backend and SQLite3
-target_link_libraries(database_sensor PRIVATE
-    imtui-ncurses
-    SQLite3::SQLite3
-)
-
-# Copy SQL schema and seed files to build directory so they're accessible at runtime
-file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/setup.sql DESTINATION ${CMAKE_BINARY_DIR})
-file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/seed.sql DESTINATION ${CMAKE_BINARY_DIR})

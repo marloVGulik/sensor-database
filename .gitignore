@@ -1,4 +1,4 @@
 build
 vendor/imgui
 imgui.ini
-sensor_data.db
+sensors_data.db
